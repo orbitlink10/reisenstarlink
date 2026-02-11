@@ -94,6 +94,14 @@ Route::middleware('cart.merge')->group(function () {
 // Payment webhook (COD stub)
 Route::post('/payments/callback', [PaymentController::class, 'callback'])->name('payments.callback');
 
+// Public media fallback for hosts without public/storage symlink support.
+Route::get('/media/public/{path}', function (string $path) {
+    abort_if(str_contains($path, '..'), 404);
+    abort_unless(Storage::disk('public')->exists($path), 404);
+
+    return response()->file(Storage::disk('public')->path($path));
+})->where('path', '.*')->name('media.public');
+
 // --- Admin panel ---
 Route::get('/admin/login', function () {
     return view('admin.login');
@@ -177,7 +185,7 @@ Route::post('/admin/homepage-content', function (Request $request) {
             'highlight_two' => ['required', 'string', 'max:160'],
             'highlight_three' => ['required', 'string', 'max:160'],
             'testimonial_blurb' => ['required', 'string', 'max:220'],
-            'hero_image' => ['nullable', 'image', 'max:2048'],
+            'hero_image' => ['nullable', 'image', 'max:5120'],
             'long_content' => ['nullable', 'string'],
             'contact_phone' => ['required', 'string', 'max:40'],
             'contact_email' => ['required', 'email', 'max:120'],
@@ -188,7 +196,7 @@ Route::post('/admin/homepage-content', function (Request $request) {
             'testimonials' => ['nullable', 'array', 'max:8'],
             'testimonials.*.title' => ['nullable', 'string', 'max:160'],
             'testimonials.*.copy' => ['nullable', 'string', 'max:400'],
-            'testimonials.*.image' => ['nullable', 'image', 'max:2048'],
+            'testimonials.*.image' => ['nullable', 'image', 'max:5120'],
         ]);
 
         $existing = [];
@@ -197,7 +205,14 @@ Route::post('/admin/homepage-content', function (Request $request) {
         }
 
         if ($request->hasFile('hero_image')) {
-            $path = $request->file('hero_image')->store('homepage', 'public');
+            $heroFile = $request->file('hero_image');
+            if (! $heroFile->isValid()) {
+                return back()->withInput()->withErrors([
+                    'hero_image' => 'Hero image upload failed. Please try a smaller image and check server upload limits.',
+                ]);
+            }
+
+            $path = $heroFile->store('homepage', 'public');
             $data['hero_image'] = $path;
         } else {
             $data['hero_image'] = $existing['hero_image'] ?? null;
@@ -231,7 +246,10 @@ Route::post('/admin/homepage-content', function (Request $request) {
                 $copy = trim($row['copy'] ?? '');
                 $imagePath = $existing['testimonials'][$idx]['image'] ?? null;
                 if (!empty($testimonialFiles[$idx]['image'] ?? null)) {
-                    $imagePath = $testimonialFiles[$idx]['image']->store('testimonials', 'public');
+                    $testimonialImage = $testimonialFiles[$idx]['image'];
+                    if ($testimonialImage->isValid()) {
+                        $imagePath = $testimonialImage->store('testimonials', 'public');
+                    }
                 }
                 if ($title !== '' || $copy !== '' || $imagePath) {
                     $cleanTestimonials[] = [
@@ -389,7 +407,14 @@ Route::get('/{slug}', function (string $slug) {
     $image = $page['image'] ?? null;
     if ($image) {
         if (!Str::startsWith($image, ['http://', 'https://', '//'])) {
-            $image = asset('storage/' . $image);
+            if (Storage::disk('public')->exists($image)) {
+                $publicPath = public_path('storage/'.$image);
+                $image = file_exists($publicPath)
+                    ? asset('storage/' . $image)
+                    : route('media.public', ['path' => $image]);
+            } else {
+                $image = 'https://via.placeholder.com/800x420?text=No+image';
+            }
         }
     } else {
         $image = 'https://via.placeholder.com/800x420?text=No+image';

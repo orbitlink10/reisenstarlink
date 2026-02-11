@@ -5,8 +5,13 @@
 
 @php
     $heroPath = $content['hero_image'] ?? null;
-    $heroLocal = $heroPath ? public_path('storage/'.$heroPath) : null;
-    $heroUrl = ($heroLocal && file_exists($heroLocal)) ? asset('storage/'.$heroPath) : asset('images/og-placeholder.png');
+    $heroUrl = asset('images/og-placeholder.png');
+    if ($heroPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($heroPath)) {
+        $heroLocal = public_path('storage/'.$heroPath);
+        $heroUrl = file_exists($heroLocal)
+            ? asset('storage/'.$heroPath)
+            : route('media.public', ['path' => $heroPath]);
+    }
 @endphp
 @section('meta_image', $heroUrl)
 
@@ -116,8 +121,13 @@
                     <div class="h-full w-full flex items-center justify-center py-12 px-6">
                         @php
                             $heroPath = $content['hero_image'] ?? null;
-                            $heroLocal = $heroPath ? public_path('storage/'.$heroPath) : null;
-                            $heroUrl = ($heroLocal && file_exists($heroLocal)) ? asset('storage/'.$heroPath) : null;
+                            $heroUrl = null;
+                            if ($heroPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($heroPath)) {
+                                $heroLocal = public_path('storage/'.$heroPath);
+                                $heroUrl = file_exists($heroLocal)
+                                    ? asset('storage/'.$heroPath)
+                                    : route('media.public', ['path' => $heroPath]);
+                            }
                         @endphp
                         @if($heroUrl)
                             <img src="{{ $heroUrl }}" alt="Hero image" class="w-full h-64 object-cover rounded-2xl">
@@ -149,7 +159,14 @@
                                 @php
                                     $img = $item['image'] ?? null;
                                     if ($img && !Str::startsWith($img, ['http://','https://'])) {
-                                        $img = asset('storage/'.$img);
+                                        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($img)) {
+                                            $imgLocal = public_path('storage/'.$img);
+                                            $img = file_exists($imgLocal)
+                                                ? asset('storage/'.$img)
+                                                : route('media.public', ['path' => $img]);
+                                        } else {
+                                            $img = null;
+                                        }
                                     }
                                 @endphp
                                 @if(!empty($img))

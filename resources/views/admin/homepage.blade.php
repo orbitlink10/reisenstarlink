@@ -29,8 +29,13 @@
                     <label class="block text-sm font-semibold text-slate-700" for="hero_image">Hero image</label>
                     @php
                         $heroPath = $content['hero_image'] ?? null;
-                        $heroLocal = $heroPath ? public_path('storage/'.$heroPath) : null;
-                        $heroUrl = ($heroLocal && file_exists($heroLocal)) ? asset('storage/'.$heroPath) : null;
+                        $heroUrl = null;
+                        if ($heroPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($heroPath)) {
+                            $heroLocal = public_path('storage/'.$heroPath);
+                            $heroUrl = file_exists($heroLocal)
+                                ? asset('storage/'.$heroPath)
+                                : route('media.public', ['path' => $heroPath]);
+                        }
                     @endphp
                     @if($heroUrl)
                         <div class="w-full h-40 rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
@@ -42,7 +47,7 @@
                         </div>
                     @endif
                     <input id="hero_image" name="hero_image" type="file" accept="image/*" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 focus:border-blue-400 focus:ring focus:ring-blue-100">
-                    <p class="text-xs text-slate-500">Upload a large, high-quality JPG/PNG (max 2MB).</p>
+                    <p class="text-xs text-slate-500">Upload a large, high-quality JPG/PNG (max 5MB).</p>
                     @error('hero_image')<p class="text-sm text-rose-600">{{ $message }}</p>@enderror
                 </div>
             </div>
@@ -213,7 +218,12 @@
                                     $img = $item['image'] ?? null;
                                     $imgUrl = null;
                                     if ($img && !Str::startsWith($img, ['http://','https://'])) {
-                                        $imgUrl = asset('storage/'.$img);
+                                        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($img)) {
+                                            $imgLocal = public_path('storage/'.$img);
+                                            $imgUrl = file_exists($imgLocal)
+                                                ? asset('storage/'.$img)
+                                                : route('media.public', ['path' => $img]);
+                                        }
                                     } elseif ($img) {
                                         $imgUrl = $img;
                                     }
