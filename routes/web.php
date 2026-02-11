@@ -149,7 +149,25 @@ Route::middleware('admin.auth')->group(function () {
         ]);
     })->name('admin.homepage');
 
-    Route::post('/admin/homepage-content', function (Request $request) {
+Route::post('/admin/homepage-content', function (Request $request) {
+        $defaults = [
+            'contact_whatsapp' => '254774849471',
+            'services' => [
+                ['title' => 'Home & SME', 'copy' => 'Starlink, 4G, and broadband with smart Wi-Fi design.'],
+                ['title' => 'Enterprise', 'copy' => 'Dedicated fibre, SD-WAN, QoS, and proactive monitoring.'],
+                ['title' => 'Events & Field', 'copy' => 'Rapid deployment internet for pop-ups, sites, and broadcasts.'],
+                ['title' => 'Support', 'copy' => '24/7 NOC, remote diagnostics, and on-site engineers.'],
+                ['title' => 'Coverage', 'copy' => 'Nairobi, Kiambu, Kajiado, Mombasa, Kisumu, Eldoret and more.'],
+                ['title' => 'Billing Flex', 'copy' => 'Monthly, project-based, or short-term event packages.'],
+            ],
+            'testimonials' => [
+                ['title' => 'Nationwide ISP Network', 'copy' => 'Core/edge upgrades across Nairobi, Mombasa, Kisumu, and Eldoret with 99.95% uptime targets.', 'image' => null],
+                ['title' => 'Healthcare Campus Wi-Fi', 'copy' => 'Multi-building secure Wi-Fi with guest/staff segmentation and SD-WAN failover.', 'image' => null],
+                ['title' => 'Construction & Remote Sites', 'copy' => 'Starlink + 4G hybrid links with portable power for remote build sites and camps.', 'image' => null],
+                ['title' => 'Events & Broadcasts', 'copy' => 'Pop-up high-bandwidth connectivity for live events, TV uplinks, and exhibitions.', 'image' => null],
+            ],
+        ];
+
         $data = $request->validate([
             'hero_title' => ['required', 'string', 'max:120'],
             'hero_subtitle' => ['required', 'string', 'max:240'],
